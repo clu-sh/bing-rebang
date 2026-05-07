@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         必应-今日热榜
 // @namespace    https://greasyfork.org/zh-CN/users/1513778-chris-lu
-// @version      2026.05.07.01
+// @version      2026.05.07.02
 // @description  必应 Bing 搜索添加今日热榜，Microsoft Rewards点击赚积分
 // @author       Chris Lu
 // @match        *://*.bing.com/search*
