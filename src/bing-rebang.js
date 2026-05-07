@@ -675,7 +675,7 @@ button.custom-keyword,
   function mainLoop() {
     // 检查控件是否存在（Bing 页面可能动态刷新导致控件丢失）
     if ($("#rebang").length === 0) {
-      initControls();
+      //initControls();
     }
 
     // 只在控件已显示、锁已解除、且当前 tab 有活跃会话时执行滚动和搜索
