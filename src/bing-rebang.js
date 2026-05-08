@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         必应-今日热榜
 // @namespace    https://greasyfork.org/zh-CN/users/1513778-chris-lu
-// @version      2026.05.07.02
+// @version      2026.05.08.03
 // @description  必应 Bing 搜索添加今日热榜，Microsoft Rewards点击赚积分
 // @author       Chris Lu
 // @match        *://*.bing.com/search*
@@ -12,8 +12,8 @@
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @source       https://github.com/clu-sh/bing-rebang/blob/master/src/bing-rebang.js
-// @downloadURL  https://update.greasyfork.org/scripts/549091/%E5%BF%85%E5%BA%94-%E4%BB%8A%E6%97%A5%E7%83%AD%E6%A6%9C.user.js
-// @updateURL    https://update.greasyfork.org/scripts/549091/%E5%BF%85%E5%BA%94-%E4%BB%8A%E6%97%A5%E7%83%AD%E6%A6%9C.meta.js
+// @downloadURL https://update.greasyfork.org/scripts/549091/%E5%BF%85%E5%BA%94-%E4%BB%8A%E6%97%A5%E7%83%AD%E6%A6%9C.user.js
+// @updateURL https://update.greasyfork.org/scripts/549091/%E5%BF%85%E5%BA%94-%E4%BB%8A%E6%97%A5%E7%83%AD%E6%A6%9C.meta.js
 // ==/UserScript==
 
 (function () {
@@ -48,7 +48,8 @@
   };
 
   const CSS_STYLES = `
-#rebang { padding: 0px 18px; margin-bottom: 30px; }
+  #b_content { padding-top:10px !important;}
+#rebang { padding: 10px 10%;  }
 #ext-keywords-list { border: solid silver 1px; border-radius: 5px; padding: 10px; }
 .col-form-label { line-height: 30px; margin-right: 10px; }
 .form-select { margin-right: 5px; }
@@ -107,6 +108,7 @@ button.custom-keyword,
 
   let $ = jQuery;
   let pollTimer = null;
+  let hasBootstrapped = false;
   let isInitialized = false;
   let hasScrolledCurrentPage = false;
   let isScrollAnimating = false;
@@ -385,16 +387,25 @@ button.custom-keyword,
   /** 初始化所有UI控件 */
   function initControls() {
     if (window.top !== window.self) {
-      console.log("[必应热榜] 在 iframe 中运行，跳过初始化");
+      console.log("控件在 iframe 中运行，跳过初始化");
       return;
     }
 
-    if ($("#rebang").length > 0 || $("#b_content").length === 0) {
+    if ($("#ext-channels").length > 0) {
+      // 关键子元素存在，说明控件已完整初始化
       return;
     }
+
+    if ($("#b_content").length === 0) {
+      console.log("[必应热榜] 控件容器不存在，跳过初始化");
+      return;
+    }
+
+    // #rebang 存在但内容被清空时，先移除残留容器再重建
+    $("#rebang").remove();
 
     // 注入主界面 HTML
-    $("#b_content").prepend(`
+    $("#b_content").before(`
       <div id="rebang">
         <div class="row">
           <label class="col-form-label"><strong>今日热榜:</strong></label>
@@ -673,10 +684,8 @@ button.custom-keyword,
 
   /** 主轮询（定期检查并执行自动搜索） */
   function mainLoop() {
-    // 检查控件是否存在（Bing 页面可能动态刷新导致控件丢失）
-    if ($("#rebang").length === 0) {
-      //initControls();
-    }
+    // 每次心跳都检查控件是否完整，防止被其他脚本或页面重建清空
+    initControls();
 
     // 只在控件已显示、锁已解除、且当前 tab 有活跃会话时执行滚动和搜索
     if ($("#rebang").length > 0 && !isAutoSearchLocked() && isSessionActive()) {
@@ -693,14 +702,54 @@ button.custom-keyword,
   // 注入全局样式
   GM_addStyle(CSS_STYLES);
 
-  // 页面加载完成后启动轮询
-  $(document).ready(() => {
+  /** 启动并维持脚本运行（幂等） */
+  function bootstrapRuntime() {
     if (window.top !== window.self) return;
 
-    // 先尝试立即初始化
-    initControls();
+    if (!hasBootstrapped) {
+      hasBootstrapped = true;
 
-    // 启动轮询（如果尚未初始化完成）
-    pollTimer = setInterval(mainLoop, AUTO_SEARCH.POLL_INTERVAL_MS);
+      // 启动轮询（仅启动一次）
+      if (!pollTimer) {
+        pollTimer = setInterval(mainLoop, AUTO_SEARCH.POLL_INTERVAL_MS);
+      }
+    }
+
+    initControls();
+  }
+
+  /** 监听同页路由变化，确保控件可恢复 */
+  function installNavigationHooks() {
+    const rawPushState = history.pushState;
+    const rawReplaceState = history.replaceState;
+
+    history.pushState = function (...args) {
+      const result = rawPushState.apply(this, args);
+      setTimeout(bootstrapRuntime, 0);
+      return result;
+    };
+
+    history.replaceState = function (...args) {
+      const result = rawReplaceState.apply(this, args);
+      setTimeout(bootstrapRuntime, 0);
+      return result;
+    };
+  }
+
+  installNavigationHooks();
+
+  // pageshow: bfcache 返回或页面恢复场景
+  window.addEventListener("pageshow", bootstrapRuntime);
+
+  // popstate: 浏览器前进后退导致同页状态切换
+  window.addEventListener("popstate", () => {
+    setTimeout(bootstrapRuntime, 0);
   });
+
+  // 首次启动：支持 ready 前后两种注入时机
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootstrapRuntime, { once: true });
+  } else {
+    bootstrapRuntime();
+  }
 })();
