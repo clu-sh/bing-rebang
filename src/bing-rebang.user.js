@@ -32,8 +32,8 @@
 // @connect      www.ithome.com
 // @connect      ai-bot.cn
 // @source       https://github.com/clu-sh/bing-rebang/blob/master/src/bing-rebang.user.js
-// @downloadURL https://update.greasyfork.org/scripts/549091/%E5%BF%85%E5%BA%94-%E4%BB%8A%E6%97%A5%E7%83%AD%E6%A6%9C.user.js
-// @updateURL https://update.greasyfork.org/scripts/549091/%E5%BF%85%E5%BA%94-%E4%BB%8A%E6%97%A5%E7%83%AD%E6%A6%9C.meta.js
+// @downloadURL https://github.com/clu-sh/bing-rebang/blob/master/src/bing-rebang.user.js
+// @updateURL https://github.com/clu-sh/bing-rebang/blob/master/src/bing-rebang.user.js
 // ==/UserScript==
 
 (function () {
